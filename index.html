@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Model Viewer</title>
+  <style>
+    body {
+      margin: 0;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+  <input type="text" id="userInput" placeholder="Enter a command here" style="position: absolute; top: 20px; left: 20px; z-index: 1; width: 300px;">
+  <button onclick="handleCommand()" style="position: absolute; top: 20px; left: 340px; z-index: 1;">Submit</button>
+  
+  <script>
+    // Create the scene, camera, and renderer
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    // Add lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+    directionalLight.position.set(5, 5, 5);
+    scene.add(directionalLight);
+
+    // Load the GLB file
+    let model; // To store the loaded model globally
+    const loader = new THREE.GLTFLoader();
+    loader.load('atg.glb', function (gltf) {
+      console.log('Model loaded successfully');
+      model = gltf.scene;
+      model.scale.set(1, 1, 1);
+      scene.add(model);
+    }, undefined, function (error) {
+      console.error('An error occurred while loading the model:', error);
+    });
+
+    // Add orbit controls
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.update();
+
+    // Position the camera
+    camera.position.set(0, 2, 10);
+
+    // Animation loop
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update(); // Update controls every frame
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Function to handle user input commands
+    async function handleCommand() {
+  const input = document.getElementById('userInput').value.toLowerCase();
+  console.log("User input:", input); // Log user input before sending request
+
+  try {
+    // Send the input to the Flask server for OpenAI processing
+    const response = await fetch('http://127.0.0.1:5000/process_command', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ user_input: input })
+    });
+
+    const data = await response.json();
+    const command = data.command.toLowerCase();
+    console.log("Command received from server:", command); // Log the command to execute
+
+    // Execute the command on the model
+    if (model) {
+      if (command.includes('rotate left')) {
+        model.rotation.y += 0.1; // Rotate model left
+      } else if (command.includes('rotate right')) {
+        model.rotation.y -= 0.1; // Rotate model right
+      } else if (command.includes('move up')) {
+        model.position.y += 0.1; // Move model up
+      } else if (command.includes('move down')) {
+        model.position.y -= 0.1; // Move model down
+      } else if (command.includes('move forward')) {
+        model.position.z -= 0.1; // Move model forward
+      } else if (command.includes('move backward')) {
+        model.position.z += 0.1; // Move model backward
+      } else {
+        console.log('Unknown command received from OpenAI:', command);
+      }
+    } else {
+      console.error('Model not yet loaded.');
+    }
+  } catch (error) {
+    console.error('Error communicating with Flask server:', error);
+  }
+}
+
+
+  </script>
+</body>
+</html>

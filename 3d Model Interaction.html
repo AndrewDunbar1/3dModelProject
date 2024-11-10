@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Model Interaction</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+</head>
+<body>
+  <script>
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    const loader = new THREE.GLTFLoader();
+    let model;
+
+    loader.load('/users/andrewdunbar/downloads/atg.glb', (gltf) => {
+      model = gltf.scene;
+      scene.add(model);
+      camera.position.z = 5;
+      animate();
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    async function sendCommand(userInput) {
+      const response = await fetch('http://127.0.0.1:5000/command', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_input: userInput })
+      });
+      const data = await response.json();
+      const command = data.command;
+
+      if (command.includes("rotate")) {
+        model.rotation.y += Math.PI / 8; // Example command to rotate model
+      }
+      // Add other conditions for different commands
+    }
+
+    // Example of using the function
+    document.addEventListener('keydown', (event) => {
+      if (event.key === "r") {
+        sendCommand("rotate the model to the left");
+      }
+    });
+  </script>
+</body>
+</html>
